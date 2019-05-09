@@ -79,9 +79,9 @@ typedef struct COMM_CONTEXT {
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint16_t pwmValorX = 0; // valor de la pwm a usar como input (ancho), se usa el valor de numeroRecivido
-uint16_t pwmValorY = 0; // valor de la pwm a usar como input (ancho), se usa el valor de numeroRecivido
-uint16_t pwmValorZ = 0; // valor de la pwm a usar como input (ancho), se usa el valor de numeroRecivido
+uint16_t posicionTargetX = 0; // valor de la pwm a usar como input (ancho), se usa el valor de numeroRecivido
+uint16_t posicionTargetY = 0; // valor de la pwm a usar como input (ancho), se usa el valor de numeroRecivido
+uint16_t posicionTargetZ = 0; // valor de la pwm a usar como input (ancho), se usa el valor de numeroRecivido
 
 extern uint8_t sdin_buffer[SDIN_BUFFER_SIZE];
 extern volatile BufferStateTypeDef SdInBufferState;
@@ -101,6 +101,10 @@ void parseInitialize(parseContext_t * parseContext);
 
 void comm_task();
 void commInitialize(commContext_t * commContext);
+
+void setpidTargetX(float posicioTarget);
+void setpidTargetY(float posicioTarget);
+void setpidTargetZ(float posicioTarget);
 
 /* USER CODE END PFP */
 
@@ -151,8 +155,8 @@ int main(void) {
 	/* USER CODE BEGIN WHILE */
 
 	while (1) {
-		comm_task();
-		parse_task();
+		comm_task();		// tarea de comunicacion con la pc
+		parse_task();		// tarea de control del PWM
 
 		/* USER CODE BEGIN 3 */
 	}
@@ -203,6 +207,7 @@ void SystemClock_Config(void) {
 
 void parse_task() {
 	static parseContext_t parseContext = { .ParseState = StateParseSTOPPED, };
+
 	switch (parseContext.ParseState) {
 	case StateParseSTOPPED:
 		parseInitialize(&parseContext);
@@ -222,69 +227,71 @@ void parse_task() {
 			if (sdin_buffer[2] == 'A' || sdin_buffer[2] == 'a') {
 				HAL_HRTIM_SimpleBaseStart(&hhrtim1, HRTIM_TIMERINDEX_MASTER);
 				HAL_HRTIM_SimplePWMStart(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A,
-						HRTIM_OUTPUT_TA1);
+				HRTIM_OUTPUT_TA1);
 				HAL_HRTIM_SimplePWMStart(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A,
-						HRTIM_OUTPUT_TA2);
+				HRTIM_OUTPUT_TA2);
 				HAL_HRTIM_SimplePWMStart(&hhrtim1, HRTIM_TIMERINDEX_TIMER_B,
-						HRTIM_OUTPUT_TB1);
+				HRTIM_OUTPUT_TB1);
 				HAL_HRTIM_SimplePWMStart(&hhrtim1, HRTIM_TIMERINDEX_TIMER_B,
-						HRTIM_OUTPUT_TB2);
+				HRTIM_OUTPUT_TB2);
 				HAL_HRTIM_SimplePWMStart(&hhrtim1, HRTIM_TIMERINDEX_TIMER_C,
-						HRTIM_OUTPUT_TC1);
+				HRTIM_OUTPUT_TC1);
 				HAL_HRTIM_SimplePWMStart(&hhrtim1, HRTIM_TIMERINDEX_TIMER_C,
-						HRTIM_OUTPUT_TC2);
+				HRTIM_OUTPUT_TC2);
 				HAL_HRTIM_SimplePWMStart(&hhrtim1, HRTIM_TIMERINDEX_TIMER_D,
-						HRTIM_OUTPUT_TD1);
+				HRTIM_OUTPUT_TD1);
 				HAL_HRTIM_SimplePWMStart(&hhrtim1, HRTIM_TIMERINDEX_TIMER_D,
-						HRTIM_OUTPUT_TD2);
+				HRTIM_OUTPUT_TD2);
 				HAL_HRTIM_SimplePWMStart(&hhrtim1, HRTIM_TIMERINDEX_TIMER_E,
-						HRTIM_OUTPUT_TE1);
+				HRTIM_OUTPUT_TE1);
 				HAL_HRTIM_SimplePWMStart(&hhrtim1, HRTIM_TIMERINDEX_TIMER_E,
-						HRTIM_OUTPUT_TE2);
+				HRTIM_OUTPUT_TE2);
 			} else if (sdin_buffer[2] == 'O' || sdin_buffer[2] == 'o') {
+				HAL_HRTIM_SimpleBaseStop(&hhrtim1, HRTIM_TIMERINDEX_MASTER);
 				HAL_HRTIM_SimplePWMStop(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A,
 				HRTIM_OUTPUT_TA1);
 				HAL_HRTIM_SimplePWMStop(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A,
 				HRTIM_OUTPUT_TA2);
 				HAL_HRTIM_SimplePWMStop(&hhrtim1, HRTIM_TIMERINDEX_TIMER_B,
-				HRTIM_OUTPUT_TA1);
+				HRTIM_OUTPUT_TB1);
 				HAL_HRTIM_SimplePWMStop(&hhrtim1, HRTIM_TIMERINDEX_TIMER_B,
-				HRTIM_OUTPUT_TA2);
+				HRTIM_OUTPUT_TB2);
 				HAL_HRTIM_SimplePWMStop(&hhrtim1, HRTIM_TIMERINDEX_TIMER_C,
-				HRTIM_OUTPUT_TA1);
+				HRTIM_OUTPUT_TC1);
 				HAL_HRTIM_SimplePWMStop(&hhrtim1, HRTIM_TIMERINDEX_TIMER_C,
-				HRTIM_OUTPUT_TA2);
+				HRTIM_OUTPUT_TC2);
 				HAL_HRTIM_SimplePWMStop(&hhrtim1, HRTIM_TIMERINDEX_TIMER_D,
-				HRTIM_OUTPUT_TA1);
+				HRTIM_OUTPUT_TD1);
 				HAL_HRTIM_SimplePWMStop(&hhrtim1, HRTIM_TIMERINDEX_TIMER_D,
-				HRTIM_OUTPUT_TA2);
+				HRTIM_OUTPUT_TD2);
 				HAL_HRTIM_SimplePWMStop(&hhrtim1, HRTIM_TIMERINDEX_TIMER_E,
-				HRTIM_OUTPUT_TA1);
+				HRTIM_OUTPUT_TE1);
 				HAL_HRTIM_SimplePWMStop(&hhrtim1, HRTIM_TIMERINDEX_TIMER_E,
-				HRTIM_OUTPUT_TA2);
+				HRTIM_OUTPUT_TE2);
 			}
 			break;
 		case 'X':
 		case 'x':
-			pwmValorX = atof((char const *) (sdin_buffer + 1));
+			posicionTargetX = atof((char const *) (sdin_buffer + 1));
 			__HAL_HRTIM_SETCOMPARE(&hhrtim1, HRTIM_TIMERINDEX_TIMER_A,
-					HRTIM_COMPAREUNIT_1, pwmValorX);
+					HRTIM_COMPAREUNIT_1, posicionTargetX);
 			__HAL_HRTIM_SETCOMPARE(&hhrtim1, HRTIM_TIMERINDEX_TIMER_B,
-					HRTIM_COMPAREUNIT_1, pwmValorX);
+					HRTIM_COMPAREUNIT_1, posicionTargetX);
 			break;
 		case 'Y':
 		case 'y':
-			pwmValorY = atof((char const *) (sdin_buffer + 1));
+			posicionTargetY = atof((char const *) (sdin_buffer + 1));
 			__HAL_HRTIM_SETCOMPARE(&hhrtim1, HRTIM_TIMERINDEX_TIMER_C,
-					HRTIM_COMPAREUNIT_1, pwmValorX);
+					HRTIM_COMPAREUNIT_1, posicionTargetY);
 			__HAL_HRTIM_SETCOMPARE(&hhrtim1, HRTIM_TIMERINDEX_TIMER_D,
-					HRTIM_COMPAREUNIT_1, pwmValorX);
+					HRTIM_COMPAREUNIT_1, posicionTargetY);
 			break;
 		case 'Z':
 		case 'z':
-			pwmValorZ = atof((char const *) (sdin_buffer + 1));
+			posicionTargetZ = atof((char const *) (sdin_buffer + 1));
+
 			__HAL_HRTIM_SETCOMPARE(&hhrtim1, HRTIM_TIMERINDEX_TIMER_E,
-					HRTIM_COMPAREUNIT_1, pwmValorX);
+					HRTIM_COMPAREUNIT_1, posicionTargetZ);
 			break;
 		default:
 			printf("Comando Desconocido\n\r");
@@ -301,6 +308,27 @@ void parse_task() {
 
 	}
 
+}
+
+void setpidTargetX(float posicioTargetX) {
+	/*
+	 * Crear codigo para el PID que controla el eje X
+	 *
+	 * */
+}
+
+void setpidTargetY(float posicioTargetY) {
+	/*
+	 * Crear codigo para el PID que controla el eje Y
+	 *
+	 * */
+}
+
+void setpidTargetZ(float posicioTargetZ) {
+	/*
+	 * Crear codigo para el PID que controla el eje Z
+	 *
+	 * */
 }
 
 void parseInitialize(parseContext_t * parseContext) {
