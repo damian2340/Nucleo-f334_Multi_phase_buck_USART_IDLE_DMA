@@ -82,6 +82,8 @@ typedef struct COMM_CONTEXT {
 uint16_t posicionTargetX = 0; // valor de la pwm a usar como input (ancho), se usa el valor de numeroRecivido
 uint16_t posicionTargetY = 0; // valor de la pwm a usar como input (ancho), se usa el valor de numeroRecivido
 uint16_t posicionTargetZ = 0; // valor de la pwm a usar como input (ancho), se usa el valor de numeroRecivido
+uint16_t phase = 0;
+float frecuency = 1500000.0;
 
 extern uint8_t sdin_buffer[SDIN_BUFFER_SIZE];
 extern volatile BufferStateTypeDef SdInBufferState;
@@ -293,12 +295,21 @@ void parse_task() {
 			__HAL_HRTIM_SETCOMPARE(&hhrtim1, HRTIM_TIMERINDEX_TIMER_E,
 					HRTIM_COMPAREUNIT_1, posicionTargetZ);
 			break;
+		case 'P':
+		case 'p':
+			phase = atoi((char const *) (sdin_buffer + 1));
+			break;
+		case 'F':
+		case 'f':
+			frecuency = atof((char const *) (sdin_buffer + 1));
+//			__HAL_HRTIM_SETPERIOD
+			break;
 		default:
 			printf("Comando Desconocido\n\r");
 			;
 		}
 
-		printf("Receive: %s \n\r", sdin_buffer);
+		printf("Receive: %s \n\rPhase %d \n\rX %d \n\r", sdin_buffer, phase, posicionTargetX);
 		SdInBufferState = BUFFER_idle;
 		parseContext.ParseState = StateParseIDLE;
 		break;
